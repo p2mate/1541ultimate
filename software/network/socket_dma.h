@@ -19,7 +19,8 @@ class SocketDMA {
 	static void performCommand(int socket, void *load_buffer, int length, uint16_t cmd, uint32_t len, struct in_addr *client_ip);
 	static int  readSocket(int socket, void *buffer, int max_remain);
 	static int  writeSocket(int socket, void *buffer, int length);
-
+	static void split_path_buffer(char *buf, size_t len, size_t &filename);
+	static void performPathCmd(uint16_t cmd, void *buf, char *dir, char *name);
 	uint8_t *load_buffer;
 public:
 	SocketDMA();

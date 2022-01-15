@@ -145,6 +145,7 @@ public:
     void cmd_mlst(const char *arg);
     void cmd_mlsd(const char *arg);
     void cmd_feat(const char *arg);
+    void cmd_mdtm(const char *arg);
 };
 
 class FTPDataConnection

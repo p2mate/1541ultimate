@@ -54,7 +54,7 @@ const uint8_t keymap_control[] = {
     KEY_RETURN, KEY_ESCAPE, KEY_BACK, KEY_TAB, ' ', '-', '=', '[',
     ']', '\\', 0x00, ';', '\'', '`', ',', '.',
     '/', KEY_CAPS, KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6,
-    KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_F11, KEY_F12, KEY_PRSCR, KEY_SCRLOCK,
+    KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_F11, KEY_F12, KEY_CTRL_PRSCR, KEY_SCRLOCK,
     KEY_BREAK, KEY_INSERT, KEY_CTRL_HOME, KEY_PAGEUP, KEY_DELETE, KEY_END, KEY_PAGEDOWN, KEY_RIGHT,
     KEY_LEFT, KEY_DOWN, KEY_UP, KEY_NUMLOCK, '/', '*', '-', '+',
     KEY_RETURN, '1', '2', '3', '4', '5', '6', '7',
@@ -105,6 +105,7 @@ Keyboard_USB :: Keyboard_USB()
 
 	memset(key_buffer, 0, KEY_BUFFER_SIZE);
 	memset(last_data, 0, USB_DATA_SIZE);
+	printf("%s:%d normal: %d, shift: %d, ctrl: %d\n", __FILE__, __LINE__, sizeof(keymap_normal), sizeof(keymap_shifted), sizeof(keymap_control));
 }
 
 Keyboard_USB :: ~Keyboard_USB()

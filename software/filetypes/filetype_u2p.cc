@@ -132,8 +132,15 @@ int FileTypeUpdate :: execute(SubsysCommand *cmd)
 			}
 		}
 		fm->fclose(file);
+		uint32_t *config_word = (uint32_t *)(header.load + header.length - 8);
+		if (config_word[0] == 0xfee1dead) {
+			config_word[1] = 7;
+		}
 		// this is a hack!
-		cmd->user_interface->host->release_ownership();
+		if (cmd->user_interface != NULL) {
+			cmd->user_interface->host->release_ownership();
+		}
+
 		file = NULL;
 #if U64
 		wifi.Disable();
@@ -144,7 +151,9 @@ int FileTypeUpdate :: execute(SubsysCommand *cmd)
         jump_run(header.start);
 	} else {
 		printf("Error opening file.\n");
-        cmd->user_interface->popup(FileSystem :: get_error_string(fres), BUTTON_OK);
+		if (cmd->user_interface != NULL) {
+        	cmd->user_interface->popup(FileSystem :: get_error_string(fres), BUTTON_OK);
+		}
 		return -1;
 	}
 	return 0;

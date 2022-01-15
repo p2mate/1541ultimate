@@ -87,6 +87,7 @@ extern "C" void ultimate_main(void *a)
     
 	printf("%s ", rtc.get_long_date(time_buffer, 32));
 	printf("%s\n", rtc.get_time_string(time_buffer, 32));
+	printf("Built @ %s %s HEAD: %s\n", __DATE__, __TIME__, GIT_COMMIT);
 
 	puts("Executing init functions.");
 	InitFunction :: executeAll();
@@ -199,7 +200,7 @@ extern "C" void ultimate_main(void *a)
 */
 
 #if !DEVELOPER
-    custom_outbyte = outbyte_log;
+    //custom_outbyte = outbyte_log;
 #endif
 
     while(c64) {
@@ -216,6 +217,9 @@ extern "C" void ultimate_main(void *a)
         case 0x04: // CTRL-D
             doIt = 2;
             break;
+		case KEY_CTRL_PRSCR:
+		    doIt = 3;
+		    break;
         }
         UserInterface *ui = c64UserInterface;
         if (overlayUserInterface) {
@@ -241,6 +245,9 @@ extern "C" void ultimate_main(void *a)
         case 2:
             ui->swapDisk();
             break;
+		case 3:
+		    c64->start_cartridge(NULL);
+			break;
         }
         vTaskDelay(3);
     }

@@ -39,7 +39,7 @@ const char *getBoardRevision(void)
 	return "Unknown";
 }
 
-void do_update(void)
+void do_update(uint32_t config_word)
 {
     setup("\033\025** Ultimate 64 Updater **\n\033\037");
 
@@ -70,13 +70,14 @@ void do_update(void)
         while(1);
     }
 
-    check_flash_disk();
+   	check_flash_disk((config_word & 1) == 1);
 
-    if(user_interface->popup("About to flash. Continue?", BUTTON_YES | BUTTON_NO) == BUTTON_YES) {
+    if(((config_word & 2) == 2)
+		|| user_interface->popup("About to flash. Continue?", BUTTON_YES | BUTTON_NO) == BUTTON_YES) {
 
         clear_field();
         create_dir(ROMS_DIRECTORY);
-        create_dir(CARTS_DIRECTORY);
+       create_dir(CARTS_DIRECTORY);
 
         if(original_kernal_found(flash2, 0x488000)) {
             copy_flash_binary(flash2, 0x488000, 0x2000, "kernal.bin");
@@ -102,11 +103,19 @@ void do_update(void)
         write_protect(flash2);
     }
 
-    reset_config(flash2);
+	if ((config_word & 4) == 0) {
+    	reset_config(flash2);
+	}
     turn_off();
 }
 
 extern "C" int ultimate_main(int argc, char *argv[])
 {
-	do_update();
+	extern uint32_t __update_config_word[];
+	printf("%s:%d config word(%p): %08x %08x\n", __FILE__, __LINE__, &__update_config_word[0], __update_config_word[0], __update_config_word[1]);
+	if (__update_config_word[0] == 0xfee1dead) {
+		do_update(__update_config_word[1]);
+	} else {
+		do_update(0);
+	}
 }

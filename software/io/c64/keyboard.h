@@ -60,5 +60,5 @@ public:
 #define KEY_PRSCR    0xA2
 #define KEY_SCRLOCK  0xA3
 #define KEY_NUMLOCK  0xA4
-
+#define KEY_CTRL_PRSCR 0xA5
 #endif

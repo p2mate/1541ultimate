@@ -48,7 +48,6 @@ void REUPreloader::poll_reu_preload(void *a)
 void REUPreloader::poll(void)
 {
     FileManagerEvent *event;
-
     while (1) {
         if ((event = (FileManagerEvent *) observerQueue->waitForEvent(25))) {
 
@@ -73,6 +72,7 @@ void REUPreloader::poll(void)
 int REUPreloader::LoadREU(char *status)
 {
     uint32_t transferred = 0;
+
     if (cfg->get_value(CFG_C64_REU_EN)) {
 
         xSemaphoreTake(sem, portMAX_DELAY); // make sure we are the only one trying to access the REU memory for loading / saving

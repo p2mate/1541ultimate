@@ -51,6 +51,7 @@ int dbg_printf(const char *fmt, ...);
 #define msg211 "211-Features:\r\n MLST size*;type*;modify*\r\n MLSD\r\n211 End"
 #define msg212 "212 Directory status."
 #define msg213 "213 %d"
+#define msg213mdtm "213 %04d%02d%02d%02d%02d%02d"
 #define msg214 "214 %s."
 /*
  214 Help message.
@@ -732,6 +733,27 @@ void FTPDaemonThread::cmd_size(const char *arg)
     send_msg(buffer);
 }
 
+void FTPDaemonThread::cmd_mdtm(const char *arg)
+{
+    vfs_stat_t st;
+    char buffer[20];
+
+    if (arg == NULL) {
+        send_msg(msg501);
+        return;
+    }
+    if (*arg == '\0') {
+        send_msg(msg501);
+        return;
+    }
+    if (vfs_stat(vfs, arg, &st) != 0) {
+        send_msg(msg550);
+        return;
+    }
+    sprintf(buffer, msg213mdtm, st.year, st.month, st.day, st.hr, st.min, st.sec);
+    send_msg(buffer);
+}
+
 struct ftpd_command {
     const char *cmd;
     func_t func;
@@ -767,6 +789,7 @@ struct ftpd_command ftpd_commands[] = {
         "MLST", &FTPDaemonThread::cmd_mlst,
         "MLSD", &FTPDaemonThread::cmd_mlsd,
         "FEAT", &FTPDaemonThread::cmd_feat,
+        "MDTM", &FTPDaemonThread::cmd_mdtm,
         NULL };
 
 void FTPDaemonThread::dispatch_command(char *text, int length)

@@ -236,6 +236,9 @@ SECTIONS
         *(.sdata .sdata.* .gnu.linkonce.s.*)
         *(.sdata2 .sdata2.* .gnu.linkonce.s2.*)
 
+	__update_config_word = .;
+	LONG(0xfee1dead)
+	LONG(0)
         . = ALIGN(4);
         _edata = ABSOLUTE(.);
         PROVIDE (edata = ABSOLUTE(.));

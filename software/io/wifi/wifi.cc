@@ -130,7 +130,8 @@ void WiFi :: Thread()
 
         printf("wifiThread actualSocket = %8x\n", actualSocket);
 
-        Boot();
+    //    Boot();
+    	Enable();
 
         vTaskDelay(100);
         read = uart->Read(buffer, 512);
@@ -152,7 +153,7 @@ void WiFi :: Thread()
                     if (read) {
                         printf("<%d|", read);
                         //printf("From ESP:\n");
-                        //dump_hex_relative(buffer, read);
+                        dump_hex_relative(buffer, read);
                         int ret = send(actualSocket, buffer, read, 0);
                         if (ret < 0) {
                             break;

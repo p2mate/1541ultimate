@@ -182,7 +182,7 @@ static void setup(const char *title)
     console_print(screen, "%s\n", rtc.get_time_string(time_buffer, 32));
 }
 
-static void check_flash_disk()
+static void check_flash_disk(bool not_empty_ok)
 {
     InitFunction :: executeAll();
 
@@ -194,7 +194,8 @@ static void check_flash_disk()
         case FR_NO_FILE: // the only case we don't need to do anything
             break;
         case FR_DIR_NOT_EMPTY: // it may be OKAY, but we can ask the user if they want to reformat it
-            if(user_interface->popup("Reformat Flash Disk?", BUTTON_YES | BUTTON_NO) == BUTTON_YES) {
+            if(!not_empty_ok &&
+				user_interface->popup("Reformat Flash Disk?", BUTTON_YES | BUTTON_NO) == BUTTON_YES) {
                 console_print(screen, "\e7Formatting...\n");
                 reformat_flash_disk();
                 free = print_free_flash_blocks();

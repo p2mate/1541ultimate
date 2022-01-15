@@ -18,6 +18,7 @@
 #include "c1541.h"
 #include "data_streamer.h"
 #include "filetype_crt.h"
+#include "filetype_u2p.h"
 
 // "Ok ok, use them then..."
 #define SOCKET_CMD_DMA         0xFF01
@@ -33,6 +34,11 @@
 #define SOCKET_CMD_RUN_IMG     0xFF0B
 #define SOCKET_CMD_POWEROFF    0xFF0C
 #define SOCKET_CMD_RUN_CRT     0xFF0D
+#define SOCKET_CMD_MOUNT_IMG_BY_PATH	0xFF10
+#define SOCKET_CMD_RUN_IMG_BY_PATH		0xFF11
+#define SOCKET_CMD_RUN_CRT_BY_PATH		0xFF12
+#define SOCKET_CMD_DMARUN_BY_PATH		0xFF13
+#define SOCKET_CMD_RESET_U64	0xFF14
 
 // Only available on U64
 #define SOCKET_CMD_VICSTREAM_ON    0xFF20
@@ -47,6 +53,7 @@
 #define SOCKET_CMD_LOADBOOTCRT  0xFF72
 #define SOCKET_CMD_READFLASH    0xFF75
 #define SOCKET_CMD_DEBUG_REG    0xFF76
+#define SOCKET_CMD_FLASH_FW	0xFF80
 
 SocketDMA socket_dma; // global that causes the object to exist
 
@@ -105,6 +112,10 @@ void SocketDMA :: performCommand(int socket, void *load_buffer, int length, uint
         sys_command = new SubsysCommand(NULL, SUBSYSID_C64, MENU_C64_RESET, 0, buf, len);
         sys_command->execute();
         break;
+    case SOCKET_CMD_RESET_U64:
+        sys_command = new SubsysCommand(NULL, SUBSYSID_C64, MENU_C64_REBOOT, 0, buf, len);
+        sys_command->execute();
+        break;
     case SOCKET_CMD_POWEROFF:
         sys_command = new SubsysCommand(NULL, SUBSYSID_C64, MENU_C64_POWEROFF, 0, buf, len);
         sys_command->execute();
@@ -152,6 +163,37 @@ void SocketDMA :: performCommand(int socket, void *load_buffer, int length, uint
         }
     }
     break;
+    case SOCKET_CMD_MOUNT_IMG_BY_PATH:
+    case SOCKET_CMD_RUN_IMG_BY_PATH:
+    case SOCKET_CMD_RUN_CRT_BY_PATH:
+    case SOCKET_CMD_DMARUN_BY_PATH:
+	case SOCKET_CMD_FLASH_FW:
+	{
+		size_t name_offset;
+		
+		split_path_buffer((char *)buf, len, name_offset);
+		if (name_offset < len) {
+			char *name = new char[len - name_offset + 1];
+			name[len - name_offset] = 0;
+			strncpy(name, (char *)buf + name_offset, len - name_offset);
+			char *dir;
+		   	if (name_offset == 0) {
+				dir = "";
+			} else {
+				size_t dir_len = name_offset - 1;
+				dir = new char[dir_len + 1];
+				dir[dir_len] = 0;
+				strncpy(dir, (char *)buf, dir_len);
+			}
+			performPathCmd(cmd, load_buffer, dir, name);
+			delete[] name;
+			if (name_offset != 0) {
+				delete[] dir;
+			}
+		}
+	}
+	break;
+
     case SOCKET_CMD_RUN_CRT:
     {
         FileManager *fm = FileManager :: getFileManager();
@@ -290,6 +332,57 @@ void SocketDMA :: performCommand(int socket, void *load_buffer, int length, uint
     }
 }
 
+void SocketDMA::performPathCmd(uint16_t cmd, void *buf, char *dir, char *name)
+{
+	switch (cmd) {
+	case SOCKET_CMD_MOUNT_IMG_BY_PATH:
+   	case SOCKET_CMD_RUN_IMG_BY_PATH:
+	{
+		SubsysCommand *sys_command =
+			new SubsysCommand(NULL, SUBSYSID_DRIVE_A, MENU_1541_MOUNT_D64, 1541, dir, name);
+		sys_command->execute();
+       	if (cmd == SOCKET_CMD_RUN_IMG_BY_PATH) {
+           	char *drvId = "H";
+           	drvId[0] = 0x40 + c1541_A->get_current_iec_address();
+           	SubsysCommand *c64cmd =
+				new SubsysCommand(NULL, SUBSYSID_C64, C64_DRIVE_LOAD, RUNCODE_MOUNT_LOAD_RUN, drvId, "*");
+           	c64cmd->execute();
+       	}
+	}
+	break;
+	case SOCKET_CMD_RUN_CRT_BY_PATH:
+	{
+		SubsysCommand *sys_command = new SubsysCommand(NULL, SUBSYSID_C64, 0, 0, dir, name);
+		FileTypeCRT::execute_st(sys_command);
+		delete sys_command;
+	}
+	break;
+	case SOCKET_CMD_FLASH_FW:
+	{
+		SubsysCommand *sys_command = new SubsysCommand(NULL, SUBSYSID_C64, 0, 0, dir, name);
+		FileTypeUpdate::execute(sys_command);
+		delete sys_command;
+	}
+	break;
+	case SOCKET_CMD_DMARUN_BY_PATH:
+	{
+		FileManager *fm = FileManager :: getFileManager();
+		File *file;
+		const FRESULT ret = fm->fopen(dir, name, FA_READ, &file);
+		if (ret == FR_OK) {
+			uint32_t size = file->get_size();
+			uint32_t read;
+			if (file->read(buf, size, &read) == FR_OK) {
+				SubsysCommand *sys_command =
+					new SubsysCommand(NULL, SUBSYSID_C64, C64_DMA_BUFFER, RUNCODE_DMALOAD_RUN, buf, size);
+		        sys_command->execute();
+			}
+		}
+	}
+	break;
+	}
+}
+
 int SocketDMA::readSocket(int socket, void *buffer, int max_remain)
 {
     int received = 0;
@@ -407,7 +500,7 @@ void SocketDMA::dmaThread(void *load_buffer)
                 break;
             }
 	        uint16_t len = (uint16_t)buf[0] | (((uint16_t)buf[1]) << 8);
-	        uint32_t len32 = len;
+            uint32_t len32 = len;
 
 	        if ((cmd == SOCKET_CMD_MOUNT_IMG) || (cmd == SOCKET_CMD_RUN_IMG) || (cmd == SOCKET_CMD_RUN_CRT)) {
 	            n = recv(newsockfd, buf+2, 1, 0);
@@ -429,4 +522,17 @@ void SocketDMA::dmaThread(void *load_buffer)
     }
     // this will never happen
     lwip_close(sockfd);
+}
+
+void SocketDMA :: split_path_buffer(char *buf, size_t len, size_t &name_offset)
+{
+	name_offset = 0;
+	if (len != 0) {
+		for (size_t last = len - 1; last > 0; last--) {
+			if (buf[last] == '/') {
+				name_offset = last + 1;
+				break;
+			}
+		}
+	}
 }
